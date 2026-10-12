@@ -242,7 +242,7 @@ always inserted after the binary, which the client cannot remove or override.
 
 Then: `journalctl` (`--no-pager`), `uptime`, `uname`, `ps` (UNIX-style options), `vmstat`,
 `strace` (attach-only: `-p PID`), `du`, `lsblk`, `ping`, `ss`, `ip` (show-only `a`/`route`),
-`nslookup`, `host`.
+`nslookup`, `host`, `head`, `tail` (no `-F`/`--follow=name`/`--retry`).
 
 ## 8b. HTTP transport (added after phase 1)
 

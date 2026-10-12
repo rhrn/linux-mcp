@@ -624,6 +624,14 @@ mod tests {
         f.ok("df -h");
         f.ok("df -hT --output=source,size logs");
         f.ok("free -h");
+        f.ok("head logs/app.log");
+        f.ok("head -n 20 -q logs/app.log logs/app.log");
+        f.ok("head -n -5 logs/app.log");
+        f.ok("cat logs/app.log | head -c 1K");
+        f.ok("tail -n 100 logs/app.log");
+        f.ok("tail -fn 50 logs/app.log");
+        f.ok("tail -n +10 logs/app.log | grep hello");
+        f.ok("tail -f --pid 1234 -s 2 logs/app.log");
         f.ok("swapon --show");
         f.ok("swapon");
 
@@ -656,6 +664,14 @@ mod tests {
             "swapon /dev/sda2", // enable a device
             "swapon --show=NAME,SIZE",
             "free -s",
+            "head /etc/passwd",
+            "head -5 logs/app.log", // legacy syntax
+            "head -n 'x' logs/app.log",
+            "tail /etc/shadow",
+            "tail -F logs/app.log", // reopens by name
+            "tail --follow=name logs/app.log",
+            "tail --retry logs/app.log",
+            "tail -n 10;id logs/app.log",
         ];
         for cmd in denied {
             if let Ok(pipeline) = parse(cmd) {

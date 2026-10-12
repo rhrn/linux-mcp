@@ -40,7 +40,7 @@ if [ ! -f "$CONF_DIR/config.toml" ]; then
         -e "s#^\# audit_log .*#audit_log         = \"$LOG_DIR/audit.jsonl\"#" \
         "$SRC_DIR/example.toml" > "$CONF_DIR/config.toml"
     # Binary locations differ between distros (e.g. /bin/grep on Alpine).
-    for cmd in ls pwd grep cat gawk top dmesg df free swapon journalctl uptime uname ps \
+    for cmd in ls pwd grep cat head tail gawk top dmesg df free swapon journalctl uptime uname ps \
                vmstat strace du lsblk ping ss ip nslookup host docker; do
         path=$(command -v "$cmd" || true)
         case "$path" in
