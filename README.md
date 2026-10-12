@@ -161,6 +161,13 @@ To expose only one-shot commands, add `tools: { include: [run, list_commands] }`
 - `top` is forced into batch mode (`-b -n 1`); `top -c` and `docker inspect` can reveal
   secrets passed on command lines or in environment variables.
 - `dmesg` usually needs root or `CAP_SYSLOG` (`kernel.dmesg_restrict=1`).
+- `strace` can only attach to running processes (`strace -p PID`, no program arguments, no `-o`,
+  no fault injection) and needs root or `CAP_SYS_PTRACE`. Traced syscalls reveal whatever the
+  process reads or writes, including credentials: remove it if that matters.
+- `journalctl` is forced to `--no-pager`, has no maintenance flags (vacuum/rotate/flush) and no
+  `--file`/`-D`; it needs the `systemd-journal` group. Logs can contain secrets.
+- `ip` is show-only (`ip a`, `ip route` with no further arguments); `ss` has no `-K`/`-D`/`-F`/`-N`.
+  `ping`, `host` and `nslookup` let clients probe any network the server can reach.
 - `docker inspect` shows container environment variables, which often contain secrets.
   Remove it from the config if that matters.
 - Path checks happen before execution (check-then-use); `ls -L` and `grep -R` are left out of

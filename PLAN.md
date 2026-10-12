@@ -240,6 +240,10 @@ Added to `config/example.toml`: `cat`, `awk` (gawk `--sandbox`), `top` (`-b -n 1
 (read-only flags), `df`, `free`, `swapon` (display only). New config key `fixed_args`: arguments
 always inserted after the binary, which the client cannot remove or override.
 
+Then: `journalctl` (`--no-pager`), `uptime`, `uname`, `ps` (UNIX-style options), `vmstat`,
+`strace` (attach-only: `-p PID`), `du`, `lsblk`, `ping`, `ss`, `ip` (show-only `a`/`route`),
+`nslookup`, `host`.
+
 ## 8b. HTTP transport (added after phase 1)
 
 Alternative to SSH for clients that can't spawn `ssh`: `linux-mcp --http`.

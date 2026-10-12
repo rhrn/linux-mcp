@@ -668,6 +668,103 @@ mod tests {
     }
 
     #[test]
+    fn diagnostic_commands() {
+        let f = fixture();
+        f.ok("journalctl -u nginx.service -n 100 --since '1 hour ago' -p err");
+        f.ok("journalctl -fu sshd");
+        f.ok("journalctl -b --boot=-1 -o json _PID=1");
+        f.ok("journalctl -k | grep -i oom");
+        f.ok("uptime");
+        f.ok("uptime -p");
+        f.ok("uname -a");
+        f.ok("ps -ef");
+        f.ok("ps -eo pid,%cpu,%mem,cmd --sort=-%mem | grep postgres");
+        f.ok("ps -p 1,2 -o pid=");
+        f.ok("vmstat 1 5");
+        f.ok("vmstat -s -S M");
+        f.ok("strace -p 1234");
+        f.ok("strace -fttT -e trace=network -s 256 -p 1234");
+        f.ok("strace -c -e openat,read -p 1,2");
+        f.ok("du -sh logs");
+        f.ok("du -h -d 1 --exclude '*.gz'");
+        f.ok("lsblk");
+        f.ok("lsblk -f -o NAME,SIZE,MOUNTPOINT");
+        f.ok("ping -c 4 example.com");
+        f.ok("ping -c3 -i 0.5 10.0.0.1");
+        f.ok("ss -tlnp");
+        f.ok("ss -tn state established '( dport = :443 )'");
+        f.ok("ip a");
+        f.ok("ip address");
+        f.ok("ip route");
+        f.ok("ip r");
+        f.ok("nslookup example.com");
+        f.ok("nslookup example.com 1.1.1.1");
+        f.ok("host example.com");
+        f.ok("host -t mx example.com 8.8.8.8");
+
+        let st = f.check("journalctl -n 5").unwrap();
+        assert_eq!(st[0].args, ["--no-pager", "-n", "5"]);
+
+        let denied = [
+            "journalctl --vacuum-size=1M",
+            "journalctl --rotate",
+            "journalctl --flush",
+            "journalctl -D /tmp",
+            "journalctl --file=/etc/shadow",
+            "journalctl --cursor-file=/tmp/x",
+            "journalctl -o export",
+            "uname --version=x",
+            "ps aux", // BSD style
+            "ps e",
+            "ps -o 'pid;id'",
+            "strace ls", // must not launch programs
+            "strace -- /bin/sh",
+            "strace -o /tmp/x -p 1",
+            "strace -o '|sh' -p 1",
+            "strace -e inject=read:error=EIO -p 1",
+            "strace -e fault=read -p 1",
+            "strace -e read=3 -p 1",
+            "strace --inject=read:error=EIO -p 1",
+            "strace -E LD_PRELOAD=x -p 1",
+            "strace -u root -p 1",
+            "strace -p 'self'",
+            "du /etc",
+            "du -L logs",
+            "du --files0-from=/etc/passwd",
+            "lsblk /dev/sda",
+            "ping -f 10.0.0.1",
+            "ping -l 100 10.0.0.1",
+            "ping -i 0.01 10.0.0.1",
+            "ping -b 255.255.255.255",
+            "ping",
+            "ping a b",
+            "ss -K dst 10.0.0.1",
+            "ss -D /tmp/x",
+            "ss -F /etc/shadow",
+            "ss -N other",
+            "ip",
+            "ip link set eth0 down",
+            "ip addr add 10.0.0.2/24 dev eth0",
+            "ip addr flush dev eth0",
+            "ip route add default via 10.0.0.1",
+            "ip route del default",
+            "ip -br a",
+            "ip netns exec x sh",
+            "nslookup",
+            "host -l example.com",
+            "host",
+        ];
+        for cmd in denied {
+            if let Ok(pipeline) = parse(cmd) {
+                assert!(
+                    f.policy.check(&pipeline, &f.root).is_err(),
+                    "expected {cmd:?} to be denied"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn path_confinement() {
         let f = fixture();
         f.ok("ls logs/app.log");

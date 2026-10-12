@@ -150,6 +150,239 @@ binary      = "/sbin/swapon"
 description = "Show swap areas"
 flags       = ["--show", "--bytes", "--noheadings", "--raw", "-s", "--summary"]
 
+[commands.journalctl]
+# Needs membership in the systemd-journal (or adm) group to see system logs.
+# Logs may contain secrets. Read-only flags only: no --vacuum-*/--rotate/--flush/
+# --sync/--setup-keys/--relinquish-var, no --cursor-file (writes a file), no
+# -D/--directory/--file/--root/--image (read unchecked paths).
+# `-b` alone is the current boot; use `--boot=-1` for older boots.
+binary      = "/usr/bin/journalctl"
+description = "Query the systemd journal (-f to follow)"
+fixed_args  = ["--no-pager"]
+flags       = ["-f", "--follow", "-r", "--reverse", "-k", "--dmesg", "-b", "-a", "--all",
+               "-x", "--catalog", "-q", "--quiet", "-m", "--merge", "-l", "--full",
+               "--utc", "--no-hostname", "--no-tail", "--system", "--user",
+               "--list-boots", "--disk-usage", "--header"]
+# Matches such as `_PID=123` or `_SYSTEMD_UNIT=nginx.service` (filters only).
+positional  = { kind = "any", max = 8 }
+
+[commands.journalctl.value_flags]
+"-n"           = '\d{1,6}|all'
+"--lines"      = '\d{1,6}|all'
+"-u"           = '[A-Za-z0-9_@.:\-*]{1,128}'
+"--unit"       = '[A-Za-z0-9_@.:\-*]{1,128}'
+"--user-unit"  = '[A-Za-z0-9_@.:\-*]{1,128}'
+"-p"           = '(emerg|alert|crit|err|warning|notice|info|debug|[0-7])(\.\.(emerg|alert|crit|err|warning|notice|info|debug|[0-7]))?'
+"--priority"   = '(emerg|alert|crit|err|warning|notice|info|debug|[0-7])(\.\.(emerg|alert|crit|err|warning|notice|info|debug|[0-7]))?'
+"-S"           = '[A-Za-z0-9_ :.+\-]{1,64}'
+"--since"      = '[A-Za-z0-9_ :.+\-]{1,64}'
+"-U"           = '[A-Za-z0-9_ :.+\-]{1,64}'
+"--until"      = '[A-Za-z0-9_ :.+\-]{1,64}'
+"--boot"       = '-?\d{1,4}|[0-9a-f]{32}'
+"-o"           = 'short|short-full|short-iso|short-iso-precise|short-precise|short-monotonic|short-delta|short-unix|verbose|json|json-pretty|json-sse|json-seq|cat|with-unit'
+"--output"     = 'short|short-full|short-iso|short-iso-precise|short-precise|short-monotonic|short-delta|short-unix|verbose|json|json-pretty|json-sse|json-seq|cat|with-unit'
+"-g"           = '.{1,256}'
+"--grep"       = '.{1,256}'
+"-t"           = '[A-Za-z0-9_.@\-]{1,64}'
+"--identifier" = '[A-Za-z0-9_.@\-]{1,64}'
+"--facility"   = '[a-z0-9]+(,[a-z0-9]+)*'
+"-F"           = '[A-Z0-9_]{1,64}'
+"--field"      = '[A-Z0-9_]{1,64}'
+
+[commands.uptime]
+binary      = "/usr/bin/uptime"
+description = "System uptime and load averages"
+flags       = ["-p", "--pretty", "-s", "--since"]
+
+[commands.uname]
+binary      = "/bin/uname"
+description = "Kernel and system information"
+flags       = ["-a", "-s", "-n", "-r", "-v", "-m", "-p", "-i", "-o",
+               "--all", "--kernel-name", "--nodename", "--kernel-release", "--kernel-version",
+               "--machine", "--processor", "--hardware-platform", "--operating-system"]
+
+[commands.ps]
+# UNIX-style options only (`ps -ef`, `ps -eo pid,%cpu,cmd --sort=-%cpu`);
+# BSD-style `ps aux` is not accepted. Command lines may contain secrets.
+binary      = "/bin/ps"
+description = "Process status (UNIX-style options, e.g. ps -ef)"
+flags       = ["-e", "-A", "-a", "-d", "-N", "--deselect", "-f", "-F", "-l", "-j", "-H",
+               "-L", "-T", "-m", "-w", "-y", "-c", "-Z", "--forest", "--no-headers", "--headers"]
+
+[commands.ps.value_flags]
+"-o"       = '[A-Za-z0-9_%,:=+\-]{1,256}'
+"-O"       = '[A-Za-z0-9_%,:=+\-]{1,256}'
+"--format" = '[A-Za-z0-9_%,:=+\-]{1,256}'
+"--sort"   = '[+-]?[A-Za-z0-9_%]+(,[+-]?[A-Za-z0-9_%]+){0,15}'
+"-p"       = '\d{1,7}(,\d{1,7}){0,63}'
+"--pid"    = '\d{1,7}(,\d{1,7}){0,63}'
+"-q"       = '\d{1,7}(,\d{1,7}){0,63}'
+"--ppid"   = '\d{1,7}(,\d{1,7}){0,63}'
+"-C"       = '[A-Za-z0-9_.:+\-]{1,64}(,[A-Za-z0-9_.:+\-]{1,64}){0,15}'
+"-u"       = '[A-Za-z0-9_.\-]{1,32}(,[A-Za-z0-9_.\-]{1,32}){0,15}'
+"-U"       = '[A-Za-z0-9_.\-]{1,32}(,[A-Za-z0-9_.\-]{1,32}){0,15}'
+"--user"   = '[A-Za-z0-9_.\-]{1,32}(,[A-Za-z0-9_.\-]{1,32}){0,15}'
+"-g"       = '[A-Za-z0-9_.\-]{1,32}(,[A-Za-z0-9_.\-]{1,32}){0,15}'
+"-G"       = '[A-Za-z0-9_.\-]{1,32}(,[A-Za-z0-9_.\-]{1,32}){0,15}'
+"--cols"   = '\d{1,5}'
+"--width"  = '\d{1,5}'
+
+[commands.vmstat]
+# `vmstat [delay [count]]`; without a count it runs until the timeout (or use stream_*).
+binary      = "/usr/bin/vmstat"
+description = "Virtual memory statistics (vmstat [delay [count]])"
+flags       = ["-a", "--active", "-f", "--forks", "-m", "--slabs", "-n", "--one-header",
+               "-s", "--stats", "-d", "--disk", "-D", "--disk-sum", "-t", "--timestamp",
+               "-w", "--wide", "-y", "--no-first"]
+positional  = { kind = "any", max = 2 }
+
+[commands.vmstat.value_flags]
+"-S"          = '[kKmM]'
+"--unit"      = '[kKmM]'
+"-p"          = '[A-Za-z0-9_/\-]{1,64}'
+"--partition" = '[A-Za-z0-9_/\-]{1,64}'
+
+[commands.strace]
+# Attach to running processes only (-p PID): no positional arguments, so it can
+# never launch a program. Needs root or CAP_SYS_PTRACE (kernel.yama.ptrace_scope).
+# Traced syscalls expose data the process reads and writes (passwords, tokens):
+# remove this command if the server user can trace sensitive processes.
+# Left out: -o (writes files; `-o |cmd` runs a shell), -E/-u/-b, -D, --inject/--fault
+# and `-e inject=`/`-e fault=` (alter the traced process), `-e read=`/`-e write=`.
+binary      = "/usr/bin/strace"
+description = "Trace system calls of a running process (strace -p PID)"
+flags       = ["-f", "--follow-forks", "-c", "--summary-only", "-C", "--summary",
+               "-w", "--summary-wall-clock", "-t", "-r", "--relative-timestamps",
+               "-T", "--syscall-times", "-y", "--decode-fds", "-k", "--stack-trace",
+               "-i", "--instruction-pointer", "-n", "--syscall-number", "-q", "--quiet",
+               "-v", "--no-abbrev", "-x", "-z", "--successful-only", "-Z", "--failed-only"]
+
+[commands.strace.value_flags]
+"-p"           = '\d{1,7}(,\d{1,7}){0,15}'
+"--attach"     = '\d{1,7}(,\d{1,7}){0,15}'
+# `-e trace=open,read`, `-e signal=none`, or a bare syscall list (`-e openat`).
+"-e"           = '((trace|abbrev|verbose|raw|signal|status|quiet|silent|decode-fds|decode-pids)=)?[A-Za-z0-9_,!%?/.\-]{1,256}'
+"--trace"      = '[A-Za-z0-9_,!%?/.\-]{1,256}'
+"--signal"     = '[A-Za-z0-9_,!%?/.\-]{1,256}'
+"--status"     = '[A-Za-z0-9_,!%?/.\-]{1,256}'
+"-s"           = '\d{1,5}'
+"--string-limit" = '\d{1,5}'
+"-a"           = '\d{1,3}'
+"-P"           = '[A-Za-z0-9_./\-]{1,256}'
+"--trace-path" = '[A-Za-z0-9_./\-]{1,256}'
+"-S"           = '[a-z_\-]{1,32}'
+"-X"           = 'raw|abbrev|verbose'
+
+[commands.du]
+# Note: no -L/--dereference (follows symlinks out of allowed_paths),
+# no --files0-from / -X / --exclude-from (read unchecked paths).
+binary      = "/usr/bin/du"
+description = "Disk usage of files and directories"
+flags       = ["-s", "--summarize", "-h", "--human-readable", "-a", "--all", "-c", "--total",
+               "-x", "--one-file-system", "-k", "-m", "-b", "--bytes", "--apparent-size",
+               "--si", "-l", "--count-links", "-S", "--separate-dirs", "-0", "--null",
+               "-P", "--no-dereference"]
+positional  = { kind = "path", max = 16 }
+
+[commands.du.value_flags]
+"-d"          = '\d{1,2}'
+"--max-depth" = '\d{1,2}'
+"-t"          = '-?\d{1,12}[KMGTPE]?'
+"--threshold" = '-?\d{1,12}[KMGTPE]?'
+"-B"          = '\d{1,9}|\d{0,9}[KMGTPE](iB|B)?'
+"--block-size" = '\d{1,9}|\d{0,9}[KMGTPE](iB|B)?'
+"--exclude"   = '.{1,256}'
+
+[commands.lsblk]
+# No device arguments (they would need /dev in allowed_paths); filter with -e/-I.
+binary      = "/usr/bin/lsblk"
+description = "List block devices"
+flags       = ["-a", "--all", "-b", "--bytes", "-d", "--nodeps", "-f", "--fs", "-l", "--list",
+               "-m", "--perms", "-n", "--noheadings", "-p", "--paths", "-r", "--raw",
+               "-t", "--topology", "-S", "--scsi", "-O", "--output-all", "-J", "--json",
+               "-z", "--zoned", "-D", "--discard"]
+
+[commands.lsblk.value_flags]
+"-o"        = '[A-Za-z0-9:+\-]{1,32}(,[A-Za-z0-9:+\-]{1,32}){0,63}'
+"--output"  = '[A-Za-z0-9:+\-]{1,32}(,[A-Za-z0-9:+\-]{1,32}){0,63}'
+"-x"        = '[A-Za-z0-9:\-]{1,32}'
+"--sort"    = '[A-Za-z0-9:\-]{1,32}'
+"-e"        = '\d{1,4}(,\d{1,4}){0,31}'
+"--exclude" = '\d{1,4}(,\d{1,4}){0,31}'
+"-I"        = '\d{1,4}(,\d{1,4}){0,31}'
+"--include" = '\d{1,4}(,\d{1,4}){0,31}'
+
+[commands.ping]
+# ping, host and nslookup let the client probe whatever the server can reach.
+# Without -c, ping runs until the timeout (or use stream_*).
+# Left out: -f (flood), -l (preload), -b (broadcast); -i is limited to >= 0.2s.
+binary      = "/usr/bin/ping"
+description = "Send ICMP echo requests (use -c N)"
+flags       = ["-4", "-6", "-n", "-q", "-D", "-O", "-v", "-U"]
+positional  = { kind = "any", min = 1, max = 1 }
+
+[commands.ping.value_flags]
+"-c" = '[1-9]\d{0,2}'
+"-i" = '[1-9]\d?(\.\d{1,3})?|0\.[2-9]\d{0,2}'
+"-s" = '\d{1,4}'
+"-t" = '\d{1,3}'
+"-W" = '\d{1,3}(\.\d{1,3})?'
+"-w" = '\d{1,4}'
+"-I" = '[A-Za-z0-9_.:%\-]{1,64}'
+
+[commands.ss]
+# Left out: -K/--kill (closes sockets), -D/--diag (writes a file),
+# -F/--filter (reads a file), -N/--net (switches network namespace).
+# -p shows owning processes (all of them only as root).
+binary      = "/usr/bin/ss"
+description = "Socket statistics (e.g. ss -tlnp, ss -tn state established)"
+flags       = ["-t", "--tcp", "-u", "--udp", "-w", "--raw", "-x", "--unix", "-l", "--listening",
+               "-a", "--all", "-n", "--numeric", "-r", "--resolve", "-p", "--processes",
+               "-e", "--extended", "-m", "--memory", "-o", "--options", "-i", "--info",
+               "-s", "--summary", "-4", "--ipv4", "-6", "--ipv6", "-0", "--packet",
+               "-H", "--no-header", "-O", "--oneline", "-M", "--mptcp", "-S", "--sctp"]
+# State and filter expressions, e.g. `state established '( dport = :443 )'`.
+positional  = { kind = "any", max = 32 }
+
+[commands.ss.value_flags]
+"-f"       = 'unix|inet|inet6|link|netlink|vsock|tipc|xdp'
+"--family" = 'unix|inet|inet6|link|netlink|vsock|tipc|xdp'
+"-A"       = '[a-z_]{1,16}(,[a-z_]{1,16}){0,15}'
+"--query"  = '[a-z_]{1,16}(,[a-z_]{1,16}){0,15}'
+
+[commands.ip]
+# Show-only: `ip a` / `ip addr` / `ip address` and `ip r` / `ip route`, with no
+# further arguments (anything after the object could be add/del/flush).
+# Global options such as `ip -br a` are not supported.
+binary      = "/usr/bin/ip"
+description = "Show addresses (ip a) and routes (ip route)"
+
+  [commands.ip.subcommands.a]
+  [commands.ip.subcommands.addr]
+  [commands.ip.subcommands.address]
+  [commands.ip.subcommands.r]
+  [commands.ip.subcommands.route]
+
+[commands.nslookup]
+# `nslookup name [server]`. `-type=...` options are not supported; use `host -t`.
+binary      = "/usr/bin/nslookup"
+description = "DNS lookup (nslookup name [server])"
+positional  = { kind = "any", min = 1, max = 2 }
+
+[commands.host]
+# Left out: -l (zone transfer).
+binary      = "/usr/bin/host"
+description = "DNS lookup (host [-t type] name [server])"
+flags       = ["-a", "-4", "-6", "-v", "-r", "-T", "-C", "-d", "-s"]
+positional  = { kind = "any", min = 1, max = 2 }
+
+[commands.host.value_flags]
+"-t" = '[A-Za-z0-9]{1,10}'
+"-c" = 'IN|CH|HS|ANY|in|ch|hs|any'
+"-W" = '\d{1,2}'
+"-R" = '\d{1,2}'
+"-N" = '\d{1,2}'
+
 [commands.docker]
 binary      = "/usr/bin/docker"
 description = "Read-only docker commands"
