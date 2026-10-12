@@ -1,0 +1,6 @@
+# /home/mcp/.ssh/authorized_keys  (owned by root, mode 0644; /home/mcp/.ssh owned by root, 0755)
+#
+# `restrict` disables PTY, port/agent/X11 forwarding and ~/.ssh/rc.
+# `command=` forces the MCP server regardless of what the client asks to run.
+# One line per client key; --client-id is recorded in the audit log.
+restrict,command="/usr/local/bin/linux-mcp --config /etc/linux-mcp/config.toml --client-id alice-laptop" ssh-ed25519 AAAA... alice@laptop

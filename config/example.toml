@@ -1,0 +1,205 @@
+# linux-mcp configuration.
+#
+# Deny by default: only commands, subcommands and flags listed here can run.
+# Commands are executed directly (no shell), by absolute path.
+# Install as /etc/linux-mcp/config.toml, owned by root, mode 0644.
+
+[server]
+workdir           = "/home/mcp"
+# Path arguments and `cwd` must resolve (after following symlinks) inside these.
+allowed_paths     = ["/home/mcp", "/var/log", "/srv"]
+max_output_bytes  = 1_048_576
+default_timeout_s = 30
+max_timeout_s     = 300
+max_concurrent    = 8
+max_streams       = 4
+max_stream_duration_s = 3600
+stream_idle_ttl_s = 300
+path_env          = "/usr/local/bin:/usr/bin:/bin"
+# audit_log       = "/var/log/linux-mcp/audit.jsonl"
+
+[server.env]
+# DOCKER_HOST = "tcp://127.0.0.1:2375"   # e.g. a read-only docker socket proxy
+
+# HTTP transport (alternative to SSH): `linux-mcp --http`.
+# Clients send `Authorization: Bearer <token>`; only token hashes are stored here.
+# Create a key with:  linux-mcp --gen-key <client-id>
+#
+# [http]
+# listen   = "0.0.0.0:8765"
+# tls_cert = "/etc/linux-mcp/tls/fullchain.pem"   # required off-loopback unless allow_plaintext
+# tls_key  = "/etc/linux-mcp/tls/privkey.pem"
+# allowed_hosts = ["mcp.example.com"]            # optional Host header allowlist
+# # allow_plaintext = true                       # only behind a TLS-terminating proxy
+#
+# [[http.keys]]
+# id     = "alice-laptop"
+# sha256 = "<64 hex chars from --gen-key>"
+
+[commands.pwd]
+binary      = "/bin/pwd"
+description = "Print the working directory"
+
+[commands.ls]
+binary      = "/bin/ls"
+description = "List directory contents"
+# Note: no -L (would follow symlinks out of allowed_paths during -R).
+flags       = ["-l", "-a", "-A", "-h", "-t", "-r", "-R", "-S", "-1", "-d", "-i", "-n", "-F"]
+positional  = { kind = "path", max = 16 }
+
+[commands.grep]
+binary      = "/usr/bin/grep"
+description = "Search text (files or piped input)"
+# Note: no -R (follows symlinks), no -f / --file (reads unchecked paths).
+flags       = ["-i", "-v", "-n", "-c", "-E", "-F", "-w", "-x", "-o", "-r", "-l", "-L", "-h", "-H", "-s", "-q"]
+positional  = { kind = "pattern_then_paths", max = 16 }
+
+[commands.grep.value_flags]
+"-e"        = '.+'
+"--regexp"  = '.+'
+"-A"        = '\d{1,4}'
+"-B"        = '\d{1,4}'
+"-C"        = '\d{1,4}'
+"-m"        = '\d{1,7}'
+"--color"   = 'never'
+
+[commands.cat]
+binary      = "/bin/cat"
+description = "Print files (or piped input)"
+flags       = ["-n", "-b", "-s", "-A", "-E", "-T", "-v", "-e", "-t"]
+positional  = { kind = "path", max = 16 }
+
+[commands.awk]
+# GNU awk only, always in --sandbox mode: no system(), no getline/print
+# redirection or pipes, no extensions, no adding files via ARGV.
+# (mawk / BWK awk / busybox awk have no sandbox: do not point this at them.)
+binary      = "/usr/bin/gawk"
+description = "Pattern scanning and processing (GNU awk, sandboxed)"
+fixed_args  = ["--sandbox"]
+# No -f/--file, -e/--source, -i/--include, -l/--load: program text only.
+positional  = { kind = "pattern_then_paths", min = 1, max = 16 }
+
+[commands.awk.value_flags]
+"-F" = '.{1,16}'
+"-v" = '[A-Za-z_][A-Za-z0-9_]*=.*'
+
+[commands.top]
+# Batch mode, one iteration: never interactive, always terminates.
+# Note: shows every process's command line (-c), which may contain secrets.
+binary      = "/usr/bin/top"
+description = "Process snapshot (batch mode, one iteration)"
+fixed_args  = ["-b", "-n", "1"]
+flags       = ["-c", "-H", "-i", "-S"]
+
+[commands.top.value_flags]
+"-o" = '[+-]?%?[A-Za-z]{1,12}'
+"-p" = '\d{1,7}(,\d{1,7}){0,19}'
+"-u" = '[A-Za-z_][A-Za-z0-9_.\-]{0,31}'
+"-U" = '[A-Za-z_][A-Za-z0-9_.\-]{0,31}'
+"-E" = '[kmgtpe]'
+"-e" = '[kmgtpe]'
+
+[commands.dmesg]
+# Usually needs root or CAP_SYSLOG (kernel.dmesg_restrict=1 on most distros);
+# otherwise fails with "Operation not permitted".
+# Read-only flags only: no -c/-C (clear), -n/-D/-E (console), -F/-K (read files).
+binary      = "/bin/dmesg"
+description = "Kernel ring buffer"
+flags       = ["-T", "--ctime", "-t", "--notime", "-k", "--kernel", "-u", "--userspace",
+               "-x", "--decode", "-r", "--raw", "-e", "--reltime", "-w", "--follow"]
+
+[commands.dmesg.value_flags]
+"-l"            = '(emerg|alert|crit|err|warn|notice|info|debug)(,(emerg|alert|crit|err|warn|notice|info|debug))*'
+"--level"       = '(emerg|alert|crit|err|warn|notice|info|debug)(,(emerg|alert|crit|err|warn|notice|info|debug))*'
+"-f"            = '[a-z]+(,[a-z]+)*'
+"--facility"    = '[a-z]+(,[a-z]+)*'
+"--time-format" = 'delta|reltime|ctime|notime|iso|raw'
+"--since"       = '[\w :.+\-]+'
+"--until"       = '[\w :.+\-]+'
+
+[commands.df]
+binary      = "/bin/df"
+description = "Filesystem disk space usage"
+flags       = ["-h", "-H", "-T", "-i", "-a", "-l", "-P", "-k", "--total",
+               "--human-readable", "--si", "--print-type", "--inodes", "--all", "--local", "--portability"]
+# Path arguments are confined like everywhere else; plain `df` lists all filesystems.
+positional  = { kind = "path", max = 16 }
+
+[commands.df.value_flags]
+"-t"       = '[a-z0-9._]+'
+"-x"       = '[a-z0-9._]+'
+"--type"   = '[a-z0-9._]+'
+"--exclude-type" = '[a-z0-9._]+'
+"--output" = '[a-z_]+(,[a-z_]+)*'
+
+[commands.free]
+binary      = "/usr/bin/free"
+description = "Memory usage"
+flags       = ["-b", "-k", "-m", "-g", "-h", "-t", "-w", "-l", "-v",
+               "--bytes", "--kilo", "--mega", "--giga", "--tera", "--si",
+               "--human", "--total", "--wide", "--lohi"]
+
+[commands.free.value_flags]
+"-c" = '\d{1,3}'
+"-s" = '\d{1,4}(\.\d{1,3})?'
+
+[commands.swapon]
+# Display only: no -a/-e, no device arguments (those would enable swap).
+# `swapon` with no arguments is the same as `swapon --show`.
+binary      = "/sbin/swapon"
+description = "Show swap areas"
+flags       = ["--show", "--bytes", "--noheadings", "--raw", "-s", "--summary"]
+
+[commands.docker]
+binary      = "/usr/bin/docker"
+description = "Read-only docker commands"
+
+  [commands.docker.subcommands.ps]
+  flags = ["-a", "--all", "-q", "--quiet", "--no-trunc", "-s", "--size", "-l", "--latest"]
+  [commands.docker.subcommands.ps.value_flags]
+  "--format" = '.+'
+  "-f"       = '[a-z_]+=[\w.\-/:@]+'
+  "--filter" = '[a-z_]+=[\w.\-/:@]+'
+  "-n"       = '\d{1,5}'
+  "--last"   = '\d{1,5}'
+
+  [commands.docker.subcommands.images]
+  flags = ["-a", "--all", "-q", "--quiet", "--no-trunc", "--digests"]
+  positional = { kind = "container", max = 1 }
+  [commands.docker.subcommands.images.value_flags]
+  "--format" = '.+'
+  "-f"       = '[a-z_]+=[\w.\-/:@]+'
+  "--filter" = '[a-z_]+=[\w.\-/:@]+'
+
+  [commands.docker.subcommands.logs]
+  # -f/--follow runs until the timeout (run) or until stopped (stream_*).
+  flags = ["-f", "--follow", "-t", "--timestamps", "--details"]
+  positional = { kind = "container", min = 1, max = 1 }
+  [commands.docker.subcommands.logs.value_flags]
+  "--tail"  = '\d{1,7}|all'
+  "-n"      = '\d{1,7}|all'
+  "--since" = '[\w.:\-+]+'
+  "--until" = '[\w.:\-+]+'
+
+  [commands.docker.subcommands.inspect]
+  # Warning: inspect shows container environment variables, which may hold secrets.
+  flags = ["-s", "--size"]
+  positional = { kind = "container", min = 1, max = 16 }
+  [commands.docker.subcommands.inspect.value_flags]
+  "--format" = '.+'
+  "-f"       = '.+'
+  "--type"   = 'container|image|volume|network'
+
+  [commands.docker.subcommands.events]
+  [commands.docker.subcommands.events.value_flags]
+  "--since"  = '[\w.:\-+]+'
+  "--until"  = '[\w.:\-+]+'
+  "-f"       = '[a-z_]+=[\w.\-/:@]+'
+  "--filter" = '[a-z_]+=[\w.\-/:@]+'
+  "--format" = '.+'
+
+  [commands.docker.subcommands.history]
+  flags = ["-H", "--human", "--no-trunc", "-q", "--quiet"]
+  positional = { kind = "container", min = 1, max = 1 }
+  [commands.docker.subcommands.history.value_flags]
+  "--format" = '.+'
